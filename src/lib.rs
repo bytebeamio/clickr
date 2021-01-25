@@ -15,6 +15,8 @@ pub enum Error {
     BadResponse(String),
     #[error("Custrom error: {0}")]
     Custom(String),
+    #[error("invalid params: {0}")]
+    InvalidParams(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
 pub use client::Client;

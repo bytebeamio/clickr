@@ -1,16 +1,16 @@
-use crate::response::{Compression, Response};
+use crate::response::Compression;
 use crate::{insert, inserter, Error};
 use hyper::client::HttpConnector;
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Client {
-    client: hyper::Client<HttpConnector>,
+    pub(crate) client: hyper::Client<HttpConnector>,
 
     pub(crate) url: String,
     pub(crate) database: Option<String>,
-    user: Option<String>,
-    password: Option<String>,
+    pub(crate) user: Option<String>,
+    pub(crate) password: Option<String>,
     compression: Compression,
     options: HashMap<String, String>,
 }
@@ -61,11 +61,11 @@ impl Client {
         self
     }
 
-    pub fn insert(&self, table: &str) -> Result<insert::Insert, Error> {
-        insert::Insert::new(self, table)
+    pub fn insert(&self, table: &str, columns: Vec<String>) -> Result<insert::Insert, Error> {
+        insert::Insert::new(self, table, columns)
     }
 
-    pub fn inserter(&self, table: &str) -> Result<inserter::Inserter, Error> {
-        inserter::Inserter::new(self, table)
+    pub fn inserter(&self, table: &str, columns: Vec<String>) -> Result<inserter::Inserter, Error> {
+        inserter::Inserter::new(self, table, columns)
     }
 }

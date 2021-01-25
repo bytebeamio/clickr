@@ -3,6 +3,7 @@ use std::{future::Future, mem, panic};
 use crate::Error;
 
 use crate::client::Client;
+use crate::response::{Compression, Response};
 use bytes::{Bytes, BytesMut};
 use hyper::{self, body, Body, Request};
 use tokio::task::JoinHandle;
@@ -18,7 +19,7 @@ pub struct Insert {
 }
 
 impl Insert {
-    pub(crate) fn new(client: &Client, table: &str) -> Result<Self, Error> {
+    pub(crate) fn new(client: &Client, table: &str, columns: Vec<String>) -> Result<Self, Error> {
         let mut url = Url::parse(&client.url).expect("TODO");
         let mut pairs = url.query_pairs_mut();
         pairs.clear();
@@ -27,7 +28,40 @@ impl Insert {
             pairs.append_pair("database", database);
         }
 
-        todo!()
+        let fields = columns.join(",");
+        let query = format!("INSERT INTO {}({}) FORMAT RowBinary", table, fields);
+        pairs.append_pair("query", &query);
+        drop(pairs);
+
+        dbg!(&url.as_str());
+        let mut builder = Request::post(url.as_str());
+
+        if let Some(user) = &client.user {
+            builder = builder.header("X-ClickHouse-User", user);
+        }
+
+        if let Some(password) = &client.password {
+            builder = builder.header("X-ClickHouse-Key", password);
+        }
+
+        let (sender, body) = Body::channel();
+
+        let request = builder
+            .body(body)
+            .map_err(|err| Error::InvalidParams(Box::new(err)))?;
+
+        let future = client.client.request(request);
+        let handle = tokio::spawn(async move {
+            // TODO: should we read the body?
+            let _ = Response::new(future, Compression::None).resolve().await?;
+            Ok(())
+        });
+
+        Ok(Insert {
+            buffer: BytesMut::with_capacity(BUFFER_SIZE),
+            sender: Some(sender),
+            handle,
+        })
     }
 
     pub fn write<'a>(

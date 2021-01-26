@@ -1,4 +1,4 @@
-use std::{future::Future, mem, panic};
+use std::{mem, panic};
 
 use crate::Error;
 
@@ -29,11 +29,10 @@ impl Insert {
         }
 
         let fields = columns.join(",");
-        let query = format!("INSERT INTO {}({}) FORMAT RowBinary", table, fields);
+        let query = format!("INSERT INTO {}({}) FORMAT JSONEachRow", table, fields);
         pairs.append_pair("query", &query);
         drop(pairs);
 
-        dbg!(&url.as_str());
         let mut builder = Request::post(url.as_str());
 
         if let Some(user) = &client.user {
@@ -64,16 +63,16 @@ impl Insert {
         })
     }
 
-    pub fn write<'a>(
-        &'a mut self,
-        payload: Bytes,
-    ) -> impl Future<Output = Result<(), Error>> + 'a + Send {
+    pub async fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
         self.buffer.extend_from_slice(&payload[..]);
+        self.send_chunk_if_exceeds(MIN_CHUNK_SIZE).await?;
+        Ok(())
+    }
 
-        async move {
-            self.send_chunk_if_exceeds(MIN_CHUNK_SIZE).await?;
-            Ok(())
-        }
+    pub async fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
+        self.buffer.extend_from_slice(payload);
+        self.send_chunk_if_exceeds(MIN_CHUNK_SIZE).await?;
+        Ok(())
     }
 
     pub async fn end(mut self) -> Result<(), Error> {

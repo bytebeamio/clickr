@@ -1,4 +1,4 @@
-use std::{future::Future, mem};
+use std::mem;
 
 use tokio::time::{Duration, Instant};
 
@@ -74,13 +74,15 @@ impl Inserter {
     }
 
     #[inline]
-    pub fn write<'a>(
-        &'a mut self,
-        payload: Bytes,
-    ) -> impl Future<Output = Result<(), Error>> + 'a + Send {
+    pub async fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
         self.uncommitted_entries += 1;
-        let fut = self.insert.write(payload);
-        async move { fut.await }
+        self.insert.write_bytes(payload).await
+    }
+
+    #[inline]
+    pub async fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
+        self.uncommitted_entries += 1;
+        self.insert.write_slice(payload).await
     }
 
     pub async fn commit(&mut self) -> Result<Quantities, Error> {

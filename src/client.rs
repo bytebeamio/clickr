@@ -6,7 +6,6 @@ use std::collections::HashMap;
 #[derive(Clone)]
 pub struct Client {
     pub(crate) client: hyper::Client<HttpConnector>,
-
     pub(crate) url: String,
     pub(crate) database: Option<String>,
     pub(crate) user: Option<String>,
@@ -61,11 +60,11 @@ impl Client {
         self
     }
 
-    pub fn insert(&self, table: &str, columns: Vec<String>) -> Result<insert::Insert, Error> {
-        insert::Insert::new(self, table, columns)
+    pub fn insert(&self, table: &str) -> Result<insert::Insert, Error> {
+        insert::Insert::new(self, table)
     }
 
-    pub fn inserter(&self, table: &str, columns: Vec<String>) -> Result<inserter::Inserter, Error> {
-        inserter::Inserter::new(self, table, columns)
+    pub fn inserter(&self, table: &str) -> Result<inserter::Inserter, Error> {
+        inserter::Inserter::new(self, table)
     }
 }

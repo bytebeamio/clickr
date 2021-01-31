@@ -19,7 +19,7 @@ pub struct Insert {
 }
 
 impl Insert {
-    pub(crate) fn new(client: &Client, table: &str, columns: Vec<String>) -> Result<Self, Error> {
+    pub(crate) fn new(client: &Client, table: &str) -> Result<Self, Error> {
         let mut url = Url::parse(&client.url).expect("TODO");
         let mut pairs = url.query_pairs_mut();
         pairs.clear();
@@ -28,8 +28,7 @@ impl Insert {
             pairs.append_pair("database", database);
         }
 
-        let fields = columns.join(",");
-        let query = format!("INSERT INTO {}({}) FORMAT JSONEachRow", table, fields);
+        let query = format!("INSERT INTO {} FORMAT JSONEachRow", table);
         pairs.append_pair("query", &query);
         drop(pairs);
 

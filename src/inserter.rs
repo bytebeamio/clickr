@@ -11,7 +11,6 @@ const DEFAULT_MAX_DURATION: Duration = Duration::from_secs(10);
 const MAX_TIME_BIAS: f64 = 0.10; // % of `max_duration`
 
 pub struct Inserter {
-    columns: Vec<String>,
     client: Client,
     table: String,
     max_entries: u64,
@@ -36,14 +35,13 @@ impl Quantities {
 }
 
 impl Inserter {
-    pub(crate) fn new(client: &Client, table: &str, columns: Vec<String>) -> Result<Self, Error> {
+    pub(crate) fn new(client: &Client, table: &str) -> Result<Self, Error> {
         Ok(Self {
-            columns: columns.clone(),
             client: client.clone(),
             table: table.into(),
             max_entries: DEFAULT_MAX_ENTRIES,
             max_duration: DEFAULT_MAX_DURATION,
-            insert: client.insert(table, columns)?,
+            insert: client.insert(table)?,
             next_insert_at: Instant::now() + DEFAULT_MAX_DURATION,
             committed: Quantities::ZERO,
             uncommitted_entries: 0,
@@ -96,7 +94,7 @@ impl Inserter {
 
         Ok(if self.is_threshold_reached(now) {
             self.next_insert_at = shifted_next_time(now, self.next_insert_at, self.max_duration);
-            let new_insert = self.client.insert(&self.table, self.columns.clone())?; // Actually it mustn't fail.
+            let new_insert = self.client.insert(&self.table)?; // Actually it mustn't fail.
             let insert = mem::replace(&mut self.insert, new_insert);
             insert.end().await?;
             mem::replace(&mut self.committed, Quantities::ZERO)

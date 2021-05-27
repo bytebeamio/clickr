@@ -6,7 +6,6 @@ use url::Url;
 const BUFFER_SIZE: usize = 128 * 1024;
 
 pub struct Inserter {
-    options: ClientOptions,
     request: Request,
     buffer: BytesMut,
 }
@@ -32,7 +31,6 @@ impl Inserter {
         }
 
         Inserter {
-            options,
             request,
             buffer: BytesMut::with_capacity(BUFFER_SIZE),
         }

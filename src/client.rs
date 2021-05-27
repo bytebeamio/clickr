@@ -1,70 +1,57 @@
-use crate::response::Compression;
-use crate::{insert, inserter, Error};
-use hyper::client::HttpConnector;
-use std::collections::HashMap;
+use crate::{ClientOptions, Error};
+use bytes::{Bytes, BytesMut};
+use ureq::{Request, Response};
+use url::Url;
 
-#[derive(Clone)]
-pub struct Client {
-    pub(crate) client: hyper::Client<HttpConnector>,
-    pub(crate) url: String,
-    pub(crate) database: Option<String>,
-    pub(crate) user: Option<String>,
-    pub(crate) password: Option<String>,
-    compression: Compression,
-    options: HashMap<String, String>,
+const BUFFER_SIZE: usize = 128 * 1024;
+
+pub struct Inserter {
+    options: ClientOptions,
+    request: Request,
+    buffer: BytesMut,
 }
 
-impl Default for Client {
-    fn default() -> Self {
-        Self {
-            client: hyper::Client::new(),
-            url: String::new(),
-            database: None,
-            user: None,
-            password: None,
-            compression: Compression::default(),
-            options: HashMap::new(),
+impl Inserter {
+    pub fn new(options: ClientOptions, table: &str) -> Inserter {
+        let mut url = Url::parse(&options.url).expect("TODO");
+        let query = format!("INSERT INTO {} FORMAT JSONEachRow", table);
+
+        url.query_pairs_mut()
+            .append_pair("database", &options.database);
+
+        url.query_pairs_mut().append_pair("query", &query);
+
+        let mut request = ureq::post(url.as_str());
+
+        if let Some(user) = &options.user {
+            request = request.set("X-ClickHouse-User", user);
+        }
+
+        if let Some(password) = &options.password {
+            request = request.set("X-ClickHouse-Key", password);
+        }
+
+        Inserter {
+            options,
+            request,
+            buffer: BytesMut::with_capacity(BUFFER_SIZE),
         }
     }
-}
 
-impl Client {
-    // TODO: use `url` crate?
-    pub fn with_url(mut self, url: impl Into<String>) -> Self {
-        self.url = url.into();
-        self
+    pub fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
+        self.buffer.extend_from_slice(&payload[..]);
+        Ok(())
     }
 
-    pub fn with_database(mut self, database: impl Into<String>) -> Self {
-        self.database = Some(database.into());
-        self
+    pub fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
+        self.buffer.extend_from_slice(payload);
+        Ok(())
     }
 
-    pub fn with_user(mut self, user: impl Into<String>) -> Self {
-        self.user = Some(user.into());
-        self
-    }
-
-    pub fn with_password(mut self, password: impl Into<String>) -> Self {
-        self.password = Some(password.into());
-        self
-    }
-
-    pub fn with_compression(mut self, compression: Compression) -> Self {
-        self.compression = compression;
-        self
-    }
-
-    pub fn with_option(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
-        self.options.insert(name.into(), value.into());
-        self
-    }
-
-    pub fn insert(&self, table: &str) -> Result<insert::Insert, Error> {
-        insert::Insert::new(self, table)
-    }
-
-    pub fn inserter(&self, table: &str) -> Result<inserter::Inserter, Error> {
-        inserter::Inserter::new(self, table)
+    pub fn end(&mut self) -> Result<Response, Error> {
+        let request = self.request.clone();
+        let response = request.send_bytes(&self.buffer[..])?;
+        self.buffer.clear();
+        Ok(response)
     }
 }

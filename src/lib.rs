@@ -1,16 +1,16 @@
 mod client;
-mod insert;
-mod inserter;
-mod response;
+mod options;
 
 use std::io;
+
+pub use client::Inserter;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("I/o failure = {0}")]
     IO(io::Error),
-    #[error("Hyper error = {0}")]
-    Hyper(#[from] hyper::Error),
+    #[error("Ureq error = {0}")]
+    Hyper(#[from] ureq::Error),
     #[error("bad response: {0}")]
     BadResponse(String),
     #[error("Custrom error: {0}")]
@@ -19,7 +19,34 @@ pub enum Error {
     InvalidParams(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
-pub use client::Client;
+#[non_exhaustive]
+pub enum Compression {
+    None,
+    #[cfg(feature = "lz4")]
+    Lz4,
+    #[cfg(feature = "gzip")]
+    Gzip,
+    #[cfg(feature = "zlib")]
+    Zlib,
+    #[cfg(feature = "brotli")]
+    Brotli,
+}
+
+impl Default for Compression {
+    #[cfg(feature = "lz4")]
+    #[inline]
+    fn default() -> Self {
+        Compression::Lz4
+    }
+
+    #[cfg(not(feature = "lz4"))]
+    #[inline]
+    fn default() -> Self {
+        Compression::None
+    }
+}
+
+pub use options::ClientOptions;
 
 #[cfg(test)]
 mod tests {

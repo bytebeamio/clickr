@@ -36,6 +36,10 @@ impl Inserter {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
     pub fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
         self.buffer.extend_from_slice(&payload[..]);
         Ok(())

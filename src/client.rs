@@ -56,4 +56,8 @@ impl Inserter {
         self.buffer.clear();
         Ok(response)
     }
+
+    pub fn clear(&mut self) {
+        self.buffer.clear();
+    }
 }

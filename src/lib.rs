@@ -1,9 +1,11 @@
 mod client;
+mod reader;
 mod options;
 
 use std::io;
 
 pub use client::Inserter;
+pub use reader::Reader;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

@@ -40,21 +40,27 @@ impl Inserter {
         self.buffer.len()
     }
 
-    pub fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
+    pub fn write_bytes(&mut self, payload: Bytes) -> Result<usize, Error> {
         self.buffer.extend_from_slice(&payload[..]);
-        Ok(())
+        let l = self.buffer.len();
+        Ok(l)
     }
 
-    pub fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
+    pub fn write_slice(&mut self, payload: &[u8]) -> Result<usize, Error> {
         self.buffer.extend_from_slice(payload);
-        Ok(())
+        let l = self.buffer.len();
+        Ok(l)
     }
 
-    pub fn end(&mut self) -> Result<Response, Error> {
-        let request = self.request.clone();
-        let response = request.send_bytes(&self.buffer[..])?;
-        self.buffer.clear();
-        Ok(response)
+    pub fn end(&mut self) -> Result<Option<Response>, Error> {
+        if self.buffer.len() > 0 {
+            let request = self.request.clone();
+            let response = request.send_bytes(&self.buffer[..])?;
+            self.buffer.clear();
+            Ok(Some(response))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn clear(&mut self) {

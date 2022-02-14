@@ -1,9 +1,15 @@
-use clickr::{Reader, ClientOptions};
+use std::str::FromStr;
 
-fn main() {
-    let ch_host = "http://localhost:8124/";
-    let mut client_options = ClientOptions::new(ch_host, "bytebeam");
-    let mut reader = Reader::new(client_options);
-    let response = reader.end().unwrap();
-    println!("{:?}", response);
+use clickr::{Reader, ClientOptions};
+use serde_json::Value;
+
+fn main(){
+    let ch_host = "http://localhost:8124/?";
+    let client_options = ClientOptions::new(ch_host, "bytebeam");
+    let reader = Reader::new(client_options);
+    let query = String::from_str("select toUnixTimestamp(timestamp) from Motor_Status_1").unwrap();
+    let query = query.as_bytes();
+    let response = reader.query(query).unwrap();
+    let response: Value = response.into_json().unwrap();
+    println!("{:?}", response["data"]);
 }

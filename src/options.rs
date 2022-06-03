@@ -6,6 +6,7 @@ pub struct ClientOptions {
     pub(crate) database: String,
     pub(crate) user: Option<String>,
     pub(crate) password: Option<String>,
+    pub(crate) secure: bool,
     compression: Compression,
     options: HashMap<String, String>,
 }
@@ -18,6 +19,7 @@ impl ClientOptions {
             user: None,
             password: None,
             compression: Compression::default(),
+            secure: false,
             options: HashMap::new(),
         }
     }
@@ -39,6 +41,11 @@ impl ClientOptions {
 
     pub fn with_option(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.options.insert(name.into(), value.into());
+        self
+    }
+
+    pub fn with_security(mut self, security: bool) -> Self {
+        self.secure = security;
         self
     }
 }

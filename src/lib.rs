@@ -1,9 +1,11 @@
-mod client;
-mod options;
-
 use std::io;
 
-pub use client::Inserter;
+mod client;
+mod db;
+mod options;
+
+pub use db::{Database, Inserter, Type};
+pub use options::ClientOptions;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -43,15 +45,5 @@ impl Default for Compression {
     #[inline]
     fn default() -> Self {
         Compression::None
-    }
-}
-
-pub use options::ClientOptions;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }

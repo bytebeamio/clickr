@@ -14,3 +14,4 @@ url = "2.2"
 rustls = "0.20"
 webpki-roots = "0.22.3"
 rustls-native-certs = "0.6"
+serde = { version = "1", features = ["derive"] }

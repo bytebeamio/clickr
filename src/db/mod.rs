@@ -23,6 +23,7 @@ pub trait Inserter {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Type {
+    #[serde(rename = "clickhouse")]
     Clickhouse,
 }
 

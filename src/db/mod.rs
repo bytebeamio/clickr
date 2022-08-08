@@ -1,15 +1,15 @@
 mod clickhouse;
 
 use bytes::Bytes;
-use clickhouse::ClickhouseInserter;
+use clickhouse::Clickhouse;
+use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 use ureq::Response;
 
 use crate::{ClientOptions, Error};
 
+#[enum_dispatch(Database)]
 pub trait Inserter {
-    fn new(db_type: &Type, options: ClientOptions, table: &str) -> Database;
-
     fn len(&self) -> usize;
 
     fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error>;
@@ -27,44 +27,15 @@ pub enum Type {
     Clickhouse,
 }
 
+#[enum_dispatch]
 pub enum Database {
-    Clickhouse(ClickhouseInserter),
+    Clickhouse,
 }
 
-impl Inserter for Database {
-    fn new(db_type: &Type, options: ClientOptions, table: &str) -> Database {
+impl Database {
+    pub fn new(db_type: &Type, options: ClientOptions, table: &str) -> Database {
         match db_type {
-            Type::Clickhouse => Self::Clickhouse(ClickhouseInserter::new(options, table)),
-        }
-    }
-
-    fn len(&self) -> usize {
-        match self {
-            Self::Clickhouse(db) => db.len(),
-        }
-    }
-
-    fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
-        match self {
-            Self::Clickhouse(db) => db.write_bytes(payload),
-        }
-    }
-
-    fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
-        match self {
-            Self::Clickhouse(db) => db.write_slice(payload),
-        }
-    }
-
-    fn clear(&mut self) {
-        match self {
-            Self::Clickhouse(db) => db.clear(),
-        }
-    }
-
-    fn end(&mut self) -> Result<Response, Error> {
-        match self {
-            Self::Clickhouse(db) => db.end(),
+            Type::Clickhouse => Self::Clickhouse(Clickhouse::new(options, table)),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ClientOptions, Error};
+use crate::{ClientOptions, Error, Inserter};
 use bytes::{Bytes, BytesMut};
 use rustls::version::{TLS12, TLS13};
 use ureq::{Request, Response};
@@ -8,13 +8,13 @@ use url::Url;
 
 const BUFFER_SIZE: usize = 128 * 1024;
 
-pub struct ClickhouseInserter {
+pub struct Clickhouse {
     request: Request,
     buffer: BytesMut,
 }
 
-impl ClickhouseInserter {
-    pub(crate) fn new(options: ClientOptions, table: &str) -> ClickhouseInserter {
+impl Clickhouse {
+    pub(crate) fn new(options: ClientOptions, table: &str) -> Clickhouse {
         let agent = match options.secure {
             true => {
                 let mut root_store = rustls::RootCertStore::empty();
@@ -73,34 +73,36 @@ impl ClickhouseInserter {
             request = request.set("X-ClickHouse-Key", password);
         }
 
-        ClickhouseInserter {
+        Clickhouse {
             request,
             buffer: BytesMut::with_capacity(BUFFER_SIZE),
         }
     }
+}
 
-    pub(crate) fn len(&self) -> usize {
+impl Inserter for Clickhouse {
+    fn len(&self) -> usize {
         self.buffer.len()
     }
 
-    pub(crate) fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
+    fn write_bytes(&mut self, payload: Bytes) -> Result<(), Error> {
         self.buffer.extend_from_slice(&payload[..]);
         Ok(())
     }
 
-    pub(crate) fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
+    fn write_slice(&mut self, payload: &[u8]) -> Result<(), Error> {
         self.buffer.extend_from_slice(payload);
         Ok(())
     }
 
-    pub(crate) fn end(&mut self) -> Result<Response, Error> {
+    fn end(&mut self) -> Result<Response, Error> {
         let request = self.request.clone();
         let response = request.send_bytes(&self.buffer[..])?;
         self.buffer.clear();
         Ok(response)
     }
 
-    pub(crate) fn clear(&mut self) {
+    fn clear(&mut self) {
         self.buffer.clear();
     }
 }
